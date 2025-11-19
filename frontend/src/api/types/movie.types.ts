@@ -17,7 +17,17 @@ export interface MovieDTO {
   inWatchlist?: boolean;
   inWatched?: boolean;
   inFavorites?: boolean;
-  categories?: Array<{ id: number; name: string; slug: string }>;
+  // Backend returns MovieCategory with nested category object
+  categories?: Array<{
+    id: number;
+    movieId: number;
+    categoryId: number;
+    category: {
+      id: number;
+      name: string;
+      slug: string;
+    };
+  }>;
   // Campos adicionales para detalles
   userRatingsCount?: number;
   userRatingsAverage?: number | null;

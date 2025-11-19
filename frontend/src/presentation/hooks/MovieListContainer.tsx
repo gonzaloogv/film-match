@@ -115,8 +115,7 @@ const MovieListContainer: React.FC = () => {
         // Create rating with 5 stars (like)
         const ratingData: CreateRatingDTO = {
           movieId: currentMovie.id,
-          rating: 5,
-          review: null
+          rating: 5
         };
 
         // Send rating to backend
@@ -146,8 +145,7 @@ const MovieListContainer: React.FC = () => {
         // Create rating with 1 star (dislike)
         const ratingData: CreateRatingDTO = {
           movieId: currentMovie.id,
-          rating: 1,
-          review: null
+          rating: 1
         };
 
         // Send rating to backend
