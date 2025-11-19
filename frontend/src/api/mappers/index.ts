@@ -1,0 +1,1 @@
+export { MovieMapper } from './movie.mapper';

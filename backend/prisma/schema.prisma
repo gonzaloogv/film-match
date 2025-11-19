@@ -1,0 +1,269 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ============================================
+// USUARIOS
+// ============================================
+model User {
+  id               Int      @id @default(autoincrement())
+  email            String   @unique
+  username         String?
+  name             String?  // Nombre completo
+  nickname         String?  // Apodo del usuario para el perfil
+  passwordHash     String?  // null para OAuth users, hash para email/password
+  googleId         String?  @unique  // Para Google OAuth
+  authProvider     String   @default("local")  // "local", "google", "both"
+  profilePicture   String?  // Avatar del usuario (URL o ID)
+  bio              String?  // Biografía/descripción del usuario
+  twitterUrl       String?  // URL de Twitter
+  instagramUrl     String?  // URL de Instagram
+  isVerified       Boolean  @default(false)  // Para email verification (futuro)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Relaciones
+  ratings          UserRating[]
+  collections      UserCollection[]
+  chatMessages     ChatMessage[]
+  preferences      UserPreferences?
+  matches          UserMatch[]
+  refreshTokens    RefreshToken[]
+
+  @@index([email])
+  @@index([googleId])
+}
+
+// ============================================
+// PELÍCULAS
+// ============================================
+model Movie {
+  id            Int      @id @default(autoincrement())
+  tmdbId        Int      @unique
+  title         String
+  overview      String?
+  releaseDate   DateTime?
+  posterPath    String?
+  voteAverage   Decimal?  @db.Decimal(3, 1)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  embeddingStatus String @default("pending") // pending, in_progress, completed
+
+  // Relaciones
+  categories MovieCategory[]
+  ratings UserRating[]
+  collections UserCollection[]
+  embeddings MovieEmbedding[]
+  userPreferences UserPreferenceMovie[]
+  matches UserMatch[]
+
+  @@index([tmdbId])
+  @@index([createdAt])
+  @@index([voteAverage])
+}
+
+// ============================================
+// CATEGORÍAS/GÉNEROS
+// ============================================
+model Category {
+  id    Int     @id @default(autoincrement())
+  name  String  @unique
+  slug  String  @unique
+  createdAt DateTime @default(now())
+
+  // Relaciones
+  movies MovieCategory[]
+
+  @@index([slug])
+}
+
+// ============================================
+// RELACIÓN N:M PELÍCULAS Y CATEGORÍAS
+// ============================================
+model MovieCategory {
+  id        Int     @id @default(autoincrement())
+  movieId   Int
+  categoryId Int
+  createdAt DateTime @default(now())
+
+  // Relaciones
+  movie Movie @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([movieId, categoryId])
+  @@index([movieId])
+  @@index([categoryId])
+}
+
+// ============================================
+// RATINGS DE USUARIOS A PELÍCULAS
+// ============================================
+model UserRating {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  movieId   Int
+  rating    Int      // 1-10
+  review    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relaciones
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  movie Movie @relation(fields: [movieId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, movieId]) // Un usuario solo puede calificar una película una vez
+  @@index([userId])
+  @@index([movieId])
+  @@index([createdAt])
+  @@index([userId, rating]) // Para filtros por usuario y rating
+  @@index([rating]) // Para recomendaciones por rating
+}
+
+// ============================================
+// COLECCIONES DE USUARIOS
+// ============================================
+model UserCollection {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  movieId   Int
+  type      String   // "favorite", "watchlist", "watched"
+  createdAt DateTime @default(now())
+
+  // Relaciones
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  movie Movie @relation(fields: [movieId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, movieId, type]) // Un usuario no puede tener la misma película en la misma colección dos veces
+  @@index([userId])
+  @@index([movieId])
+  @@index([type])
+}
+
+// ============================================
+// EMBEDDINGS DE PELÍCULAS (Para RAG - Fase 3)
+// ============================================
+model MovieEmbedding {
+  id        Int      @id @default(autoincrement())
+  movieId   Int      @unique
+  vectorId  String   // ID del vector en Pinecone
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relaciones
+  movie Movie @relation(fields: [movieId], references: [id], onDelete: Cascade)
+
+  @@index([movieId])
+}
+
+// ============================================
+// MENSAJES DE CHAT (Para Gemini - Fase 3)
+// ============================================
+model ChatMessage {
+  id                 Int       @id @default(autoincrement())
+  userId             Int
+  content            String    @db.Text
+  role               String    // "user" o "assistant"
+  conversationId     String?   // Para agrupar mensajes en conversaciones
+  tokensUsed         Int?      // Tokens gastados por Gemini
+  recommendedMovies  String?   @db.Text // JSON array de películas recomendadas
+  contextSource      String?   // "hybrid", "vector", "metadata", "direct"
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  // Relaciones
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([conversationId])
+  @@index([createdAt])
+  @@index([userId, conversationId]) // Para recuperar historial de conversación
+  @@index([userId, createdAt]) // Para recuperar últimos mensajes del usuario
+}
+
+// ============================================
+// PREFERENCIAS DEL USUARIO
+// ============================================
+model UserPreferences {
+  id              Int     @id @default(autoincrement())
+  userId          Int     @unique
+  favoriteGenres  String  @db.Text  // JSON array de géneros favoritos
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relaciones
+  user            User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  favoriteMovies  UserPreferenceMovie[]
+
+  @@index([userId])
+}
+
+// ============================================
+// PELÍCULAS FAVORITAS DEL USUARIO (Relación N:M)
+// ============================================
+model UserPreferenceMovie {
+  id            Int     @id @default(autoincrement())
+  preferencesId Int
+  movieId       Int
+  createdAt     DateTime @default(now())
+
+  // Relaciones
+  preferences   UserPreferences @relation(fields: [preferencesId], references: [id], onDelete: Cascade)
+  movie         Movie @relation(fields: [movieId], references: [id], onDelete: Cascade)
+
+  @@unique([preferencesId, movieId]) // No duplicados
+  @@index([preferencesId])
+  @@index([movieId])
+}
+
+// ============================================
+// ENUM PARA ESTADO DE MATCH
+// ============================================
+enum MatchStatus {
+  like
+  dislike
+  superlike
+}
+
+// ============================================
+// MATCHES DE USUARIOS (Swipe like/dislike)
+// ============================================
+model UserMatch {
+  id        Int         @id @default(autoincrement())
+  userId    Int
+  movieId   Int
+  status    MatchStatus
+  createdAt DateTime    @default(now())
+
+  // Relaciones
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  movie Movie @relation(fields: [movieId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, movieId])
+  @@index([userId, status])
+  @@index([userId, createdAt])
+}
+
+// ============================================
+// REFRESH TOKENS
+// ============================================
+model RefreshToken {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  tokenHash String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  // Relaciones
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, tokenHash])
+}

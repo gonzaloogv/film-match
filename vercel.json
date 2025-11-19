@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "projects": [
+    {
+      "name": "film-match-frontend",
+      "rootDirectory": "frontend"
+    },
+    {
+      "name": "film-match-backend",
+      "rootDirectory": "backend"
+    }
+  ]
+}
