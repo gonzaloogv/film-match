@@ -71,7 +71,7 @@ export interface PaginationParams {
 export interface PaginationMeta {
   page: number;
   limit: number;
-  totalItems: number;
+  total: number;
   totalPages: number;
 }
 

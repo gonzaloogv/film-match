@@ -28,6 +28,6 @@ export const getPaginationMeta = (
 ): PaginationMeta => ({
   page,
   limit,
-  totalItems: total,
+  total,
   totalPages: Math.ceil(total / limit),
 });

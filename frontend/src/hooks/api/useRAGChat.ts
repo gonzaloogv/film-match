@@ -16,6 +16,8 @@ import type { ChatRequestDTO, ChatMessageDTO } from '@/api/types';
  */
 export const useRAGChat = () => {
   const queryClient = useQueryClient();
+  // Get current user for authenticated requests
+  const { currentUser } = useAuth();
 
   // Query: Check if chat service is available
   const {
@@ -82,9 +84,10 @@ export const useRAGChat = () => {
     error: recommendationsError,
     refetch: refetchRecommendations,
   } = useQuery({
-    queryKey: queryKeys.rag.recommendations(),
-    queryFn: () => ragService.getRecommendations(10),
+    queryKey: queryKeys.rag.recommendations(currentUser?.id),
+    queryFn: () => ragService.getRecommendations(currentUser!.id, { topK: 10 }),
     staleTime: QUERY_CACHE_TIMES.RECOMMENDATIONS,
+    enabled: !!currentUser?.id, // Only fetch when user is authenticated
   });
 
   // Query: Get popular suggestions
@@ -97,9 +100,6 @@ export const useRAGChat = () => {
     queryFn: () => ragService.getPopularSuggestions(10),
     staleTime: QUERY_CACHE_TIMES.RECOMMENDATIONS,
   });
-
-  // Get current user
-  const { currentUser } = useAuth();
 
   // Helper: Send message with proper structure
   const sendMessage = (message: string, conversationId?: string, topK?: number) => {

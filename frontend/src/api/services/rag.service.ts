@@ -65,11 +65,29 @@ class RAGService {
 
   /**
    * Obtener recomendaciones personalizadas
+   * @param userId - ID del usuario (requerido)
+   * @param options - Opciones adicionales
    */
-  async getRecommendations(topK: number = 10): Promise<RecommendationDTO[]> {
+  async getRecommendations(
+    userId: string | number,
+    options: {
+      topK?: number;
+      excludeRated?: boolean;
+      minUserRating?: number;
+    } = {}
+  ): Promise<RecommendationDTO[]> {
+    const { topK = 10, excludeRated = true, minUserRating = 3 } = options;
+
     const response = await apiClient.get<ApiResponse<RecommendationDTO[]>>(
       `${this.basePath}/recommendations`,
-      { params: { topK } }
+      {
+        params: {
+          userId: String(userId),
+          topK,
+          excludeRated,
+          minUserRating
+        }
+      }
     );
     return response.data.data;
   }

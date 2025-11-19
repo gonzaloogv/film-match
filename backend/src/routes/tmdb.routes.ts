@@ -20,6 +20,10 @@ router.get('/movie/:tmdbId', tmdbController.getMovieDetails.bind(tmdbController)
 // GET /api/tmdb/genres
 router.get('/genres', tmdbController.getGenres.bind(tmdbController));
 
+// GET /api/tmdb/bulk-sync?key=YOUR_SECRET_KEY
+// Sincroniza ~200 películas de TMDB a la BD
+router.get('/bulk-sync', tmdbController.bulkSync.bind(tmdbController));
+
 /**
  * Rutas protegidas (requieren autenticación)
  */

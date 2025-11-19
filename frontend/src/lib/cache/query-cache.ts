@@ -152,7 +152,7 @@ export const queryKeys = {
     chatHistory: (conversationId?: string) =>
       [...queryKeys.rag.chat(), conversationId || 'current'] as const,
     semanticSearch: (query: string) => [...queryKeys.rag.all, 'semantic-search', query] as const,
-    recommendations: () => [...queryKeys.rag.all, 'recommendations'] as const,
+    recommendations: (userId?: string | number) => [...queryKeys.rag.all, 'recommendations', userId] as const,
     suggestions: () => [...queryKeys.rag.all, 'suggestions'] as const,
   },
 

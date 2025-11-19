@@ -221,6 +221,53 @@ export class TMDBController {
       next(error);
     }
   }
+
+  /**
+   * Bulk sync - sincroniza películas populares + categorías principales
+   * Protegido por API key en query param
+   */
+  async bulkSync(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { key } = req.query;
+      const syncKey = process.env.SYNC_SECRET_KEY || 'default-sync-key-change-me';
+
+      if (key !== syncKey) {
+        res.status(401).json({
+          success: false,
+          error: 'Invalid sync key'
+        });
+        return;
+      }
+
+      const results = [];
+      let totalMovies = 0;
+
+      // Phase 1: Popular movies
+      console.log('📍 Phase 1: Syncing Popular Movies');
+      const popularResult = await tmdbSyncService.syncPopularMovies({ maxPages: 3 });
+      results.push({ type: 'popular', ...popularResult });
+      totalMovies += popularResult.totalSaved;
+
+      // Phase 2: Categories
+      const categories = ['action', 'drama', 'comedy', 'horror', 'sci-fi'];
+      for (const category of categories) {
+        console.log(`📍 Syncing category: ${category}`);
+        const catResult = await tmdbSyncService.syncByCategory(category, { maxPages: 2 });
+        results.push({ type: category, ...catResult });
+        totalMovies += catResult.totalSaved;
+      }
+
+      res.json({
+        success: true,
+        data: {
+          totalMovies,
+          results
+        }
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export const tmdbController = new TMDBController();

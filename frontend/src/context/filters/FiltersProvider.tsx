@@ -60,6 +60,7 @@ function filtersReducer(state: FiltersState, action: FiltersAction): FiltersStat
   switch (action.type) {
     case 'SET_CRITERIA':
       return {
+        ...state,
         criteria: action.payload,
         isActive: checkIsActive(action.payload),
       };
@@ -67,6 +68,7 @@ function filtersReducer(state: FiltersState, action: FiltersAction): FiltersStat
     case 'UPDATE_SEARCH':
       newCriteria = { ...state.criteria, search: action.payload };
       return {
+        ...state,
         criteria: newCriteria,
         isActive: checkIsActive(newCriteria),
       };
@@ -74,6 +76,7 @@ function filtersReducer(state: FiltersState, action: FiltersAction): FiltersStat
     case 'UPDATE_GENRES':
       newCriteria = { ...state.criteria, genres: action.payload };
       return {
+        ...state,
         criteria: newCriteria,
         isActive: checkIsActive(newCriteria),
       };
@@ -84,6 +87,7 @@ function filtersReducer(state: FiltersState, action: FiltersAction): FiltersStat
         : [...state.criteria.genres, action.payload];
       newCriteria = { ...state.criteria, genres };
       return {
+        ...state,
         criteria: newCriteria,
         isActive: checkIsActive(newCriteria),
       };
@@ -91,6 +95,7 @@ function filtersReducer(state: FiltersState, action: FiltersAction): FiltersStat
     case 'UPDATE_YEAR_RANGE':
       newCriteria = { ...state.criteria, yearRange: action.payload };
       return {
+        ...state,
         criteria: newCriteria,
         isActive: checkIsActive(newCriteria),
       };
@@ -98,14 +103,17 @@ function filtersReducer(state: FiltersState, action: FiltersAction): FiltersStat
     case 'UPDATE_MIN_RATING':
       newCriteria = { ...state.criteria, minRating: action.payload };
       return {
+        ...state,
         criteria: newCriteria,
         isActive: checkIsActive(newCriteria),
       };
 
     case 'RESET_FILTERS':
       return {
+        ...state,
         criteria: defaultCriteria,
         isActive: false,
+        pagination: { ...state.pagination, currentPage: 1 },
       };
 
     case 'RESET_FILTER':
@@ -176,9 +184,15 @@ function loadFiltersFromStorage(): FiltersState {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       const parsed = JSON.parse(stored);
+      // Return complete state with all required fields
+      // Use parsed values with fallbacks to initial state
       return {
-        criteria: parsed,
-        isActive: checkIsActive(parsed),
+        criteria: parsed.criteria ?? parsed ?? defaultCriteria,
+        isActive: checkIsActive(parsed.criteria ?? parsed),
+        pagination: parsed.pagination ?? initialFiltersState.pagination,
+        sortBy: parsed.sortBy ?? initialFiltersState.sortBy,
+        trend: parsed.trend ?? initialFiltersState.trend,
+        decade: parsed.decade ?? initialFiltersState.decade,
       };
     }
   } catch (err) {
@@ -200,14 +214,20 @@ interface FiltersProviderProps {
 export const FiltersProvider: React.FC<FiltersProviderProps> = ({ children }) => {
   const [state, dispatch] = useReducer(filtersReducer, initialFiltersState, loadFiltersFromStorage);
 
-  // Persist to localStorage when criteria changes
+  // Persist complete state to localStorage when it changes
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state.criteria));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        criteria: state.criteria,
+        pagination: state.pagination,
+        sortBy: state.sortBy,
+        trend: state.trend,
+        decade: state.decade,
+      }));
     } catch (err) {
       console.error('Error saving filters to storage:', err);
     }
-  }, [state.criteria]);
+  }, [state.criteria, state.pagination, state.sortBy, state.trend, state.decade]);
 
   // Actions
   const setCriteria = useCallback((criteria: MovieFilterCriteria) => {

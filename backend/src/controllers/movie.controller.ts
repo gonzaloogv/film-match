@@ -12,9 +12,8 @@ export class MovieController {
       const result = await movieService.getMovies(params);
 
       res.json({
-        success: true,
         data: result.movies,
-        meta: result.meta
+        pagination: result.meta
       });
     } catch (error) {
       next(error);
@@ -67,9 +66,8 @@ export class MovieController {
       const result = await movieService.getMoviesByCategory(slug, page, limit);
 
       res.json({
-        success: true,
         data: result.movies,
-        meta: result.meta,
+        pagination: result.meta,
         category: result.category
       });
     } catch (error) {
