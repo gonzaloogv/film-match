@@ -11,10 +11,10 @@ import { motion } from 'framer-motion';
 import { X, Star } from 'lucide-react';
 import { useMovieRatings } from '@/hooks';
 import { UserRating } from '@core';
-import type { Movie } from '@core';
+import type { MovieDTO } from '@/api/types';
 
 interface RatingModalProps {
-  movie: Movie;
+  movie: MovieDTO;
   onClose: () => void;
   onRatingSubmit?: (rating: UserRating) => void;
 }
@@ -120,14 +120,24 @@ const RatingModal: React.FC<RatingModalProps> = ({ movie, onClose, onRatingSubmi
             {/* Movie Info */}
             <div className="flex gap-4">
               <img
-                src={movie.poster}
+                src={movie.posterPath ? `https://image.tmdb.org/t/p/w154${movie.posterPath}` : 'https://via.placeholder.com/154x231?text=No+Image'}
                 alt={movie.title}
                 className="w-20 h-28 rounded-lg object-cover"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.src = 'https://via.placeholder.com/154x231?text=No+Image';
+                }}
               />
               <div className="flex-1">
                 <h3 className="font-bold mb-2">{movie.title}</h3>
-                <p className="text-sm text-gray-400">{movie.year}</p>
-                <p className="text-xs text-gray-500 mt-2">{(movie.genres || []).filter(Boolean).join(', ') || 'Sin géneros'}</p>
+                <p className="text-sm text-gray-400">
+                  {movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : 'N/A'}
+                </p>
+                <p className="text-xs text-gray-500 mt-2">
+                  {movie.categories && movie.categories.length > 0
+                    ? movie.categories.map(c => c.category.name).join(', ')
+                    : 'Sin géneros'}
+                </p>
               </div>
             </div>
 
