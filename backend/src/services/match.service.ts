@@ -108,24 +108,56 @@ function shuffle<T>(items: T[]): T[] {
 /**
  * Obtiene películas para discover (excluyendo ya vistas)
  * Con orden aleatorio usando shuffle en memoria
- * 
+ * Aplica filtro automático de géneros favoritos si el usuario los tiene configurados
+ *
  * Nota: Este endpoint usa "random soft" (shuffle en memoria) en lugar de ORDER BY RANDOM()
  * para mejor performance. Si necesitas agregar filtros en el futuro, agrega parámetros
  * opcionales pero mantén el shuffle para variedad.
- * 
+ *
  * @param userId - ID del usuario
  * @param limit - Cantidad de películas a retornar (default: 10)
- * @returns Array de películas en orden aleatorio, excluyendo las ya matcheadas
+ * @returns Array de películas en orden aleatorio, excluyendo las ya matcheadas y filtradas por preferencias
  */
 export async function getDiscoverMovies(userId: number, limit = 10) {
+  // 🎯 Cargar preferencias del usuario
+  const userPreferences = await prisma.userPreferences.findUnique({
+    where: { userId }
+  });
+
+  let favoriteGenres: string[] = [];
+  if (userPreferences && userPreferences.favoriteGenres) {
+    try {
+      favoriteGenres = JSON.parse(userPreferences.favoriteGenres);
+    } catch (e) {
+      console.warn('⚠️  Error parsing favoriteGenres:', e);
+    }
+  }
+
+  // 🔍 Build where clause
+  const whereClause: any = {
+    matches: {
+      none: { userId }
+    }
+  };
+
+  // 🎬 Si el usuario tiene géneros favoritos, filtrar por ellos
+  if (favoriteGenres.length > 0) {
+    console.log(`🎯 Filtering discover movies by genres: ${favoriteGenres.join(', ')}`);
+    whereClause.categories = {
+      some: {
+        category: {
+          name: {
+            in: favoriteGenres
+          }
+        }
+      }
+    };
+  }
+
   // Traer el doble de películas para tener buena variedad al mezclar
   // limit * 2 es suficiente sin sobrecargar la BD
   const candidates = await prisma.movie.findMany({
-    where: {
-      matches: {
-        none: { userId }
-      }
-    },
+    where: whereClause,
     include: {
       categories: {
         include: {

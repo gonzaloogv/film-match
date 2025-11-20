@@ -52,8 +52,34 @@ const Preferences: React.FC = () => {
     const loadPreferences = async () => {
       try {
         const preferences = await preferencesService.getPreferences();
+
+        // Load favorite genres
         if (preferences.favoriteGenres.length > 0) {
           setSelectedGenres(preferences.favoriteGenres);
+        }
+
+        // Load favorite movies (fetch full movie data)
+        if (preferences.favoriteMovieIds && preferences.favoriteMovieIds.length > 0) {
+          const moviePromises = preferences.favoriteMovieIds.map(async (id) => {
+            try {
+              const response = await fetch(`${import.meta.env.VITE_API_URL}/movies/${id}`, {
+                headers: {
+                  'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+                }
+              });
+              if (response.ok) {
+                const data = await response.json();
+                return data.data;
+              }
+            } catch (err) {
+              console.error(`Error loading movie ${id}:`, err);
+            }
+            return null;
+          });
+
+          const movies = await Promise.all(moviePromises);
+          const validMovies = movies.filter(m => m !== null) as MovieDTO[];
+          setFavoriteMovies(validMovies);
         }
       } catch (error) {
         console.error('Error loading preferences:', error);

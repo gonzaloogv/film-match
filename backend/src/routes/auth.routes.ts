@@ -2,30 +2,27 @@ import { Router } from 'express';
 import { googleAuth, getGoogleAuthUrl, googleCallback, register, login, refresh, logoutUser } from '../controllers/auth.controller';
 import { env } from '../config/env';
 import { authenticate } from '../middleware/auth.middleware';
-import { authRateLimit } from '../middleware/rateLimit.middleware';
+// import { authRateLimit } from '../middleware/rateLimit.middleware';
 
 const router = Router();
 
 /**
  * POST /api/auth/register
  * Registrar nuevo usuario con email y contraseña
- * Rate limited: 5 intentos cada 15 minutos
  */
-router.post('/register', authRateLimit, register);
+router.post('/register', register);
 
 /**
  * POST /api/auth/login
  * Login con email y contraseña
- * Rate limited: 5 intentos cada 15 minutos
  */
-router.post('/login', authRateLimit, login);
+router.post('/login', login);
 
 /**
  * POST /api/auth/refresh
  * Renovar tokens usando refresh token
- * Rate limited: 5 intentos cada 15 minutos
  */
-router.post('/refresh', authRateLimit, refresh);
+router.post('/refresh', refresh);
 
 /**
  * POST /api/auth/logout
