@@ -3,13 +3,18 @@
  * Manages user's movie ratings and reviews
  *
  * Provides state management and operations for ratings and comments
- * Integrates with the UserDataRepository for persistence to localStorage
+ * Integrates with both localStorage (UserDataRepository) and backend API
+ * Automatically syncs with backend and invalidates React Query cache
  */
 
 import { useCallback, useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useDIContainer } from './useDIContainer';
 import { DI_TOKENS, type UserRating } from '@core';
 import type { IUserDataRepository } from '@core';
+import { ratingService } from '@/api/services/rating.service';
+import { queryKeys } from '@/lib/cache/query-cache';
+import type { CreateRatingDTO } from '@/api/types/rating.types';
 
 /**
  * Hook for managing movie ratings
@@ -41,6 +46,7 @@ import type { IUserDataRepository } from '@core';
  */
 export function useMovieRatings() {
   const { get } = useDIContainer();
+  const queryClient = useQueryClient();
   const [ratings, setRatings] = useState<UserRating[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -69,14 +75,30 @@ export function useMovieRatings() {
 
   /**
    * Add or update a rating
+   * Saves to both localStorage and backend API, then invalidates cache
    */
   const addRating = useCallback(
     async (rating: UserRating): Promise<void> => {
       try {
+        // 1. Save to localStorage first (for immediate feedback)
         const repo = get<IUserDataRepository>(DI_TOKENS.USER_DATA_REPOSITORY);
         await repo.addRating(rating);
 
-        // Update local state
+        // 2. Send to backend API
+        // Backend expects rating 1-10, but UserRating uses 1-5, so multiply by 2
+        const createRatingDto: CreateRatingDTO = {
+          movieId: rating.movieId,
+          rating: rating.rating * 2, // Convert 1-5 to 1-10
+          review: rating.comment || undefined,
+        };
+
+        await ratingService.createOrUpdateRating(createRatingDto);
+
+        // 3. Invalidate React Query cache to refresh user reviews
+        await queryClient.invalidateQueries({ queryKey: queryKeys.user.reviews() });
+        await queryClient.invalidateQueries({ queryKey: queryKeys.ratings.all });
+
+        // 4. Update local state
         setRatings((prev) => {
           const existingIndex = prev.findIndex((r) => r.movieId === rating.movieId);
           if (existingIndex >= 0) {
@@ -86,6 +108,8 @@ export function useMovieRatings() {
           }
           return [...prev, rating];
         });
+
+        console.log(`✅ Rating saved to backend and cache invalidated for movie ${rating.movieId}`);
       } catch (err) {
         const error = err instanceof Error ? err : new Error(String(err));
         setError(error);
@@ -93,7 +117,7 @@ export function useMovieRatings() {
         throw error;
       }
     },
-    [get]
+    [get, queryClient]
   );
 
   /**
