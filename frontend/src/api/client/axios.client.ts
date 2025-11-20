@@ -6,14 +6,24 @@ import { setupInterceptors } from './interceptors';
  */
 const getBaseURL = (): string => {
   const isDevelopment = !import.meta.env.PROD;
+  const envBaseUrl = import.meta.env.VITE_API_BASE_URL;
 
   if (isDevelopment) {
     // En desarrollo, usar la URL del entorno o /api (proxy de Vite)
-    return import.meta.env.VITE_API_BASE_URL || '/api';
+    return envBaseUrl || '/api';
   }
 
-  // En producción, usar la URL configurada en .env.production
-  return import.meta.env.VITE_API_BASE_URL;
+  // En producción, DEBE estar configurado en Vercel Dashboard
+  if (!envBaseUrl) {
+    console.error('❌ VITE_API_BASE_URL is not configured in Vercel!');
+    console.error('Go to Vercel Dashboard → Settings → Environment Variables');
+    console.error('Add: VITE_API_BASE_URL = https://film-match-backend.onrender.com/api');
+    console.error('Then redeploy your application');
+    // Fallback a la URL de producción conocida
+    return 'https://film-match-backend.onrender.com/api';
+  }
+
+  return envBaseUrl;
 };
 
 /**
