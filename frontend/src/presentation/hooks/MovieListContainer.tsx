@@ -6,7 +6,7 @@
  * Uses custom hooks for all state and data management
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMatches } from '@/hooks/api';
@@ -41,12 +41,23 @@ const MovieListContainer: React.FC = () => {
     discoverError,
     createMatch,
     isCreatingMatch,
+    refetchDiscover,
   } = useMatches();
 
   // Local UI state
   const [currentMovieIndex, setCurrentMovieIndex] = useState(0);
   const [showMatchModal, setShowMatchModal] = useState(false);
   const [matchedMovie, setMatchedMovie] = useState<Movie | null>(null);
+
+  // Auto-fetch more movies when getting close to the end
+  useEffect(() => {
+    const remainingMovies = discoverMovies.length - currentMovieIndex;
+
+    // When we have 2 or fewer movies left, fetch more
+    if (remainingMovies <= 2 && !isLoadingDiscover && discoverMovies.length > 0) {
+      refetchDiscover();
+    }
+  }, [currentMovieIndex, discoverMovies.length, isLoadingDiscover, refetchDiscover]);
 
   /**
    * Get current movie to display
@@ -164,7 +175,7 @@ const MovieListContainer: React.FC = () => {
         <div className="w-full sm:max-w-6xl lg:max-w-7xl mx-auto h-[calc(100vh-80px-48px)]">
           {/* Movie Cards Stack */}
           <div className="flex justify-center items-center h-full relative">
-            {discoverMovies.length === 0 ? (
+            {discoverMovies.length === 0 && !isLoadingDiscover ? (
               <motion.div
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -172,33 +183,23 @@ const MovieListContainer: React.FC = () => {
               >
                 <h2 className="text-2xl font-bold mb-4">No hay películas disponibles</h2>
                 <p className="text-gray-400 mb-6">
-                  Intenta ajustar tus filtros para encontrar películas.
+                  Intenta ajustar tus preferencias de géneros para encontrar películas.
                 </p>
                 <button
-                  onClick={() => navigate('/search')}
+                  onClick={() => navigate('/preferences')}
                   className="btn-primary"
                 >
-                  Ir a Búsqueda Avanzada
+                  Ir a Preferencias
                 </button>
               </motion.div>
-            ) : currentMovieIndex >= discoverMovies.length ? (
+            ) : isLoadingDiscover || !currentMovie ? (
               <motion.div
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="card text-center w-full max-w-sm sm:max-w-md"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex flex-col items-center justify-center"
               >
-                <h2 className="text-2xl font-bold mb-4">
-                  ¡No hay más películas para mostrar!
-                </h2>
-                <p className="text-gray-400 mb-6">
-                  Has visto {discoverMovies.length} películas. Recarga para ver más.
-                </p>
-                <button
-                  onClick={() => window.location.reload()}
-                  className="btn-primary"
-                >
-                  Cargar Más Películas
-                </button>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-pink mb-4"></div>
+                <p className="text-gray-400">Cargando más películas...</p>
               </motion.div>
             ) : (
               <>
