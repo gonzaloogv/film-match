@@ -114,8 +114,12 @@ const MovieListContainer: React.FC = () => {
    * Handle view details from modal
    */
   const handleViewDetailsFromModal = () => {
-    setShowMatchModal(false);
-    handleViewDetails();
+    if (matchedMovie) {
+      setShowMatchModal(false);
+      setMatchedMovie(null);
+      // Navigate to the matched movie, not the current one
+      navigate(`/movie/${matchedMovie.id}`);
+    }
   };
 
   /**

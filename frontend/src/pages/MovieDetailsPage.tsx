@@ -99,7 +99,7 @@ const MovieDetailsPage: React.FC = () => {
                   )}
                   {movie.categories && movie.categories.length > 0 && (
                     <>
-                      <span className="line-clamp-1">{movie.categories.map(c => c.name).join(', ')}</span>
+                      <span className="line-clamp-1">{movie.categories.map(c => c.category?.name || c.name || 'Unknown').join(', ')}</span>
                       <span>•</span>
                     </>
                   )}
@@ -168,7 +168,7 @@ const MovieDetailsPage: React.FC = () => {
                         key={cat.id}
                         className="px-2 xs:px-3 py-1 xs:py-1.5 bg-dark-input rounded-lg text-xs xs:text-sm font-medium"
                       >
-                        {cat.name}
+                        {cat.category?.name || cat.name || 'Unknown'}
                       </span>
                     ))}
                   </div>
