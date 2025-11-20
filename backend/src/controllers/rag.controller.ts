@@ -252,10 +252,13 @@ export class RagController {
       res.status(200).json({
         success: true,
         data: {
-          status,
+          ready: status.configured, // Frontend expects "ready" boolean
+          configured: status.configured,
+          model: status.model,
+          apiKeyPresent: status.apiKeyPresent,
           message: status.configured
             ? 'Chat service is ready'
-            : 'Chat service is not configured. Set GEMINI_API_KEY to enable.'
+            : 'Chat service is not configured. Set GEMINI_API_KEY to enable fallback mode.'
         }
       });
     } catch (error) {
