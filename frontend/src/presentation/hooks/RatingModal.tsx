@@ -59,11 +59,11 @@ const RatingModal: React.FC<RatingModalProps> = ({ movie, onClose, onRatingSubmi
       setIsSubmitting(true);
       setError(null);
 
-      const newRating: UserRating = {
+      const newRating = UserRating.create({
         movieId: movie.id,
         rating,
         comment: comment || undefined,
-      };
+      });
 
       await addRating(newRating);
 
