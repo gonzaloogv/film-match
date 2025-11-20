@@ -97,9 +97,9 @@ const MovieDetailsPage: React.FC = () => {
                       <span>•</span>
                     </>
                   )}
-                  {movie.categories && movie.categories.length > 0 && (
+                  {movie.categories && Array.isArray(movie.categories) && movie.categories.length > 0 && (
                     <>
-                      <span className="line-clamp-1">{movie.categories.map(c => c.category?.name || c.name || 'Unknown').join(', ')}</span>
+                      <span className="line-clamp-1">{(movie.categories || []).map(c => c?.category?.name || c?.name || 'Unknown').filter(Boolean).join(', ')}</span>
                       <span>•</span>
                     </>
                   )}
@@ -159,16 +159,16 @@ const MovieDetailsPage: React.FC = () => {
               </div>
 
               {/* Categories Grid */}
-              {movie.categories && movie.categories.length > 0 && (
+              {movie.categories && Array.isArray(movie.categories) && movie.categories.length > 0 && (
                 <div className="card p-3 xs:p-4 sm:p-6">
                   <h3 className="text-base xs:text-lg sm:text-xl font-bold mb-2 xs:mb-3">Géneros</h3>
                   <div className="flex flex-wrap gap-1.5 xs:gap-2">
-                    {movie.categories.map((cat) => (
+                    {(movie.categories || []).filter(Boolean).map((cat) => (
                       <span
-                        key={cat.id}
+                        key={cat?.id || Math.random()}
                         className="px-2 xs:px-3 py-1 xs:py-1.5 bg-dark-input rounded-lg text-xs xs:text-sm font-medium"
                       >
-                        {cat.category?.name || cat.name || 'Unknown'}
+                        {cat?.category?.name || cat?.name || 'Unknown'}
                       </span>
                     ))}
                   </div>
