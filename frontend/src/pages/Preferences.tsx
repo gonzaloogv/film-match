@@ -40,7 +40,7 @@ const Preferences: React.FC = () => {
   const queryClient = useQueryClient();
 
   // Genre preferences
-  const [selectedGenres, setSelectedGenres] = useState<string[]>(['Acción', 'Ciencia Ficción']);
+  const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
 
   // Favorite movies
   const [movieSearch, setMovieSearch] = useState('');
