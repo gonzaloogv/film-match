@@ -6,11 +6,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, X, Search, Loader } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import { preferencesService } from '@/api/services';
 import { useMovieSearch } from '@/hooks/api/useMovieSearch';
+import { queryKeys } from '@/lib/cache/query-cache';
 import type { MovieDTO } from '@/api/types';
 
 const GENRES = [
@@ -34,6 +36,7 @@ const GENRES = [
 
 const Preferences: React.FC = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   // Genre preferences
   const [selectedGenres, setSelectedGenres] = useState<string[]>(['Acción', 'Ciencia Ficción']);
@@ -120,7 +123,11 @@ const Preferences: React.FC = () => {
         favoriteMovieIds: favoriteMovies.map(m => m.id)
       });
 
-      console.log('✅ Preferences saved:', response);
+      // Invalidate queries to refetch discover movies with new filters
+      await queryClient.invalidateQueries({ queryKey: queryKeys.matches.discover() });
+      await queryClient.invalidateQueries({ queryKey: ['preferences'] });
+
+      console.log('✅ Preferences saved and cache invalidated:', response);
       setSaveMessage('✅ Preferencias guardadas exitosamente');
       setTimeout(() => navigate('/profile'), 1500);
     } catch (error) {

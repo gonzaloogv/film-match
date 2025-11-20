@@ -5,9 +5,17 @@ export const updateUserSchema = z.object({
   nickname: z.string().min(1, 'nickname must not be empty').max(50, 'nickname must be at most 50 characters').optional(),
   bio: z.string().max(500, 'bio must be at most 500 characters').optional().nullable(),
   profilePicture: z.string().optional().nullable(),
-  // Transform empty strings to null, then validate URL if present
-  twitterUrl: z.string().transform(val => val === '' ? null : val).pipe(z.string().url('twitterUrl must be a valid URL').nullable()).optional(),
-  instagramUrl: z.string().transform(val => val === '' ? null : val).pipe(z.string().url('instagramUrl must be a valid URL').nullable()).optional(),
+  // Accept empty strings or valid URLs, transform empty to null
+  twitterUrl: z.union([
+    z.string().url('twitterUrl must be a valid URL'),
+    z.literal('').transform(() => null),
+    z.null()
+  ]).optional(),
+  instagramUrl: z.union([
+    z.string().url('instagramUrl must be a valid URL'),
+    z.literal('').transform(() => null),
+    z.null()
+  ]).optional(),
 });
 
 export const categorySlugSchema = z.object({

@@ -6,10 +6,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { X } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '../ui/Button/Button';
 import { useUser } from '../../../context/user/useUser';
 import { AVAILABLE_AVATARS } from '../../../shared/constants/avatars';
 import { getAvatarImage } from '../../../shared/utils/avatarHelpers';
+import { queryKeys } from '../../../lib/cache/query-cache';
 
 interface ProfileEditModalProps {
   onClose: () => void;
@@ -17,6 +19,9 @@ interface ProfileEditModalProps {
 
 export function ProfileEditModal({ onClose }: ProfileEditModalProps) {
   const { user, updateProfile } = useUser();
+  const queryClient = useQueryClient();
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     avatar: user?.avatar || '',
@@ -26,9 +31,25 @@ export function ProfileEditModal({ onClose }: ProfileEditModalProps) {
     instagramUrl: user?.instagramUrl || '',
   });
 
-  const handleSubmit = () => {
-    updateProfile(formData);
-    onClose();
+  const handleSubmit = async () => {
+    setIsSaving(true);
+    setError(null);
+
+    try {
+      await updateProfile(formData);
+
+      // Invalidate user cache to refetch updated profile
+      await queryClient.invalidateQueries({ queryKey: queryKeys.auth.currentUser() });
+
+      console.log('✅ Profile updated and cache invalidated');
+      onClose();
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Error al actualizar perfil';
+      setError(errorMsg);
+      console.error('❌ Error updating profile:', err);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleCancel = () => {
@@ -148,6 +169,13 @@ export function ProfileEditModal({ onClose }: ProfileEditModalProps) {
           />
         </div>
 
+        {/* Error Message */}
+        {error && (
+          <div className="mb-4 p-3 rounded-lg bg-red-500/20 border border-red-500/50 text-red-400 text-sm">
+            {error}
+          </div>
+        )}
+
         {/* Action Buttons */}
         <div className="flex gap-4">
           <Button
@@ -155,6 +183,7 @@ export function ProfileEditModal({ onClose }: ProfileEditModalProps) {
             variant="secondary"
             size="lg"
             className="flex-1"
+            disabled={isSaving}
           >
             Cancelar
           </Button>
@@ -163,8 +192,9 @@ export function ProfileEditModal({ onClose }: ProfileEditModalProps) {
             variant="primary"
             size="lg"
             className="flex-1"
+            disabled={isSaving}
           >
-            Guardar Cambios
+            {isSaving ? 'Guardando...' : 'Guardar Cambios'}
           </Button>
         </div>
       </motion.div>
