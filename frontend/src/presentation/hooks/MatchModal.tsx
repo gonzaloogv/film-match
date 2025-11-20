@@ -121,7 +121,7 @@ const MatchModal: React.FC<MatchModalProps> = ({ movie, onClose, onViewDetails }
               <div className="flex items-center space-x-1 xs:space-x-1.5 text-xs text-gray-400">
                 <span>{movie.year}</span>
                 <span>•</span>
-                <span className="line-clamp-1">{movie.genres[0]}</span>
+                <span className="line-clamp-1">{(movie.genres && movie.genres[0]) || 'Sin género'}</span>
               </div>
               <p className="text-gray-300 text-xs line-clamp-2">{movie.overview}</p>
             </div>

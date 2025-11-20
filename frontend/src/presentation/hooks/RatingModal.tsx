@@ -126,7 +126,7 @@ const RatingModal: React.FC<RatingModalProps> = ({ movie, onClose, onRatingSubmi
               <div className="flex-1">
                 <h3 className="font-bold mb-2">{movie.title}</h3>
                 <p className="text-sm text-gray-400">{movie.year}</p>
-                <p className="text-xs text-gray-500 mt-2">{movie.genres.join(', ')}</p>
+                <p className="text-xs text-gray-500 mt-2">{(movie.genres || []).filter(Boolean).join(', ') || 'Sin géneros'}</p>
               </div>
             </div>
 

@@ -68,7 +68,7 @@ export const SearchMovieCard: React.FC<SearchMovieCardProps> = ({ movie }) => {
 
         {/* Genres */}
         <div className="mb-2 xs:mb-2.5">
-          <p className="text-gray-500 text-xs line-clamp-1">{movie.genres.join(', ')}</p>
+          <p className="text-gray-500 text-xs line-clamp-1">{(movie.genres || []).filter(Boolean).join(', ') || 'Sin géneros'}</p>
         </div>
 
         {/* Director */}
