@@ -41,15 +41,23 @@ export const Search: React.FC = () => {
 
   const isInitializedRef = useRef(false);
 
+  // ✅ Defensa contra pagination undefined
+  const safePagination = pagination ?? {
+    currentPage: 1,
+    itemsPerPage: 20,
+    totalResults: 0,
+    totalPages: 0,
+  };
+
   // Build API query params
   const apiParams = useMemo(() => ({
     search: criteria.search || undefined,
     minRating: criteria.minRating > 0 ? criteria.minRating * 2 : undefined, // Convert 0-5 to 0-10
-    page: pagination.currentPage,
-    limit: pagination.itemsPerPage,
-    sortBy: sortBy === 'title' ? 'title' : sortBy === 'rating' ? 'vote_average' : 'release_date',
+    page: safePagination.currentPage,
+    limit: safePagination.itemsPerPage,
+    sortBy: (sortBy === 'title' ? 'title' : sortBy === 'rating' ? 'vote_average' : 'release_date') as 'title' | 'vote_average' | 'release_date',
     sortOrder: 'desc' as const,
-  }), [criteria.search, criteria.minRating, pagination.currentPage, pagination.itemsPerPage, sortBy]);
+  }), [criteria.search, criteria.minRating, safePagination.currentPage, safePagination.itemsPerPage, sortBy]);
 
   // Fetch movies from API
   const { moviesData, isLoadingMovies } = useMovies(apiParams);
@@ -105,8 +113,9 @@ export const Search: React.FC = () => {
   }, [moviesData, decade, trend, sortBy]);
 
   const totalResults = filteredMovies.length;
-  const totalPages = Math.ceil(totalResults / pagination.itemsPerPage);
-  const currentPage = pagination.currentPage;
+  const totalResults = filteredMovies.length;
+  const totalPages = Math.ceil(totalResults / safePagination.itemsPerPage);
+  const currentPage = safePagination.currentPage;
 
   // Initialize filters from URL on mount
   useEffect(() => {
@@ -200,7 +209,7 @@ export const Search: React.FC = () => {
                   currentPage={currentPage}
                   totalPages={totalPages}
                   totalResults={totalResults}
-                  itemsPerPage={pagination.itemsPerPage}
+                  itemsPerPage={safePagination.itemsPerPage}
                 />
               )}
             </>

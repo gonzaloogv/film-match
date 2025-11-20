@@ -2,6 +2,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { matchService } from '@/api/services';
 import { queryKeys, QUERY_CACHE_TIMES } from '@/lib/cache/query-cache';
 import type { MatchStatus, MatchQueryParams } from '@/api/types';
+import { MovieMapper } from '@/api/mappers';
+import type { Movie } from '@/core/domain/entities';
 
 /**
  * useMatches hook
@@ -27,6 +29,9 @@ export const useMatches = () => {
     queryFn: () => matchService.getDiscoverMovies(10),
     staleTime: QUERY_CACHE_TIMES.DISCOVER,
   });
+
+  // Map DTOs to Movie entities
+  const mappedDiscoverMovies: Movie[] = (discoverData || []).map(dto => MovieMapper.toDomain(dto));
 
   // Query: Get matchlist with optional filters
   const getMatchlist = (params?: MatchQueryParams) => {
@@ -85,14 +90,13 @@ export const useMatches = () => {
       return { previousDiscover, previousStats };
     },
     onSuccess: (data, variables) => {
-      // Invalidate relevant queries
+      // Invalidate ALL match-related queries
       queryClient.invalidateQueries({ queryKey: queryKeys.matches.lists() });
       queryClient.invalidateQueries({ queryKey: queryKeys.matches.stats() });
-      // Refetch discover if running low on movies
-      const currentDiscover = queryClient.getQueryData(queryKeys.matches.discover(10)) as any[] | undefined;
-      if (currentDiscover && currentDiscover.length < 3) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.matches.discover(10) });
-      }
+
+      // ✅ ALWAYS invalidate discover to fetch new movies after match
+      // Using constant limit (10) for consistent cache key
+      queryClient.invalidateQueries({ queryKey: queryKeys.matches.discover(10) });
     },
     onError: (error, variables, context: any) => {
       // Rollback on error
@@ -188,7 +192,7 @@ export const useMatches = () => {
 
   return {
     // Discover data
-    discoverMovies: discoverData || [],
+    discoverMovies: mappedDiscoverMovies,
     isLoadingDiscover,
     isDiscoverError,
     discoverError,

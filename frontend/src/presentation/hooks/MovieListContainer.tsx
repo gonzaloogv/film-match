@@ -9,19 +9,22 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useMovies, useRatings } from '@/hooks/api';
-import { useMovieMatches, useFilterMovies } from '@/hooks';
-import { useUI } from '../../context/ui';
+import { useMatches } from '@/hooks/api';
 import type { Movie } from '@core';
-import type { CreateRatingDTO } from '@/api/types';
 import MovieCardComponent from './MovieCard';
 import MatchModalComponent from './MatchModal';
-import FiltersSidebarComponent from './FiltersSidebar';
 
 /**
  * Movie List Container Component
  * Main component for discovering and swiping through movies
- * Now uses React Query for server state management
+ * 
+ * Uses /api/matches/discover endpoint which:
+ * - Excludes already matched movies
+ * - Returns movies in random order (shuffled in backend)
+ * - Automatically refreshes after each match
+ * 
+ * Note: Filters are NOT available in this component - they belong in Search page.
+ * This is a pure swipe/discover flow (like Tinder).
  *
  * @example
  * ```typescript
@@ -31,132 +34,54 @@ import FiltersSidebarComponent from './FiltersSidebar';
 const MovieListContainer: React.FC = () => {
   const navigate = useNavigate();
 
-  // Filter state
-  const [filterParams, setFilterParams] = React.useState<{
-    genres: string[];
-    year: number | null;
-    minRating: number;
-  }>({
-    genres: [],
-    year: null,
-    minRating: 0,
-  });
-
-  // Get movies from React Query hook with current filters
-  const queryParams = React.useMemo(() => {
-    const params: any = {};
-
-    // Solo incluir parámetros que tienen valores reales
-    if (filterParams.genres.length > 0) {
-      params.category = filterParams.genres[0]; // Backend uses 'category' parameter, already receives slug
-      console.log('🎯 Filter by category:', params.category);
-    }
-    if (filterParams.year) {
-      params.year = filterParams.year;
-      console.log('🎯 Filter by year:', params.year);
-    }
-    if (filterParams.minRating > 0) {
-      params.minRating = filterParams.minRating;
-      console.log('🎯 Filter by minRating:', params.minRating);
-    }
-
-    console.log('📤 queryParams:', params);
-    return Object.keys(params).length > 0 ? params : undefined;
-  }, [filterParams]);
-
-  const { movies: allMovies, isLoadingMovies, moviesError } = useMovies(queryParams, true);
-
-  // Get ratings hook for submitting ratings (don't load all ratings to avoid rate limiting)
-  const { createOrUpdateRating, isCreatingRating } = useRatings(false);
-
-  // State management using custom hooks
-  const { matches, addMatch } = useMovieMatches();
-
-  // Use filtered movies from API
-  const filteredMovies = allMovies;
-
-  // Filter callbacks
-  const applyFilters = (filters: { genre: string; year: number | null; minRating: number }) => {
-    console.log('✅ Applying filters:', filters);
-    setFilterParams(prev => ({
-      genres: filters.genre ? [filters.genre] : [],
-      year: filters.year,
-      minRating: filters.minRating,
-    }));
-  };
-
-  // UI Context
-  const { filtersSidebar, closeFiltersSidebar } = useUI();
+  // ✅ Use useMatches for discover flow (random movies, excludes matches)
+  const {
+    discoverMovies = [],
+    isLoadingDiscover,
+    discoverError,
+    createMatch,
+    isCreatingMatch,
+  } = useMatches();
 
   // Local UI state
   const [currentMovieIndex, setCurrentMovieIndex] = useState(0);
   const [showMatchModal, setShowMatchModal] = useState(false);
   const [matchedMovie, setMatchedMovie] = useState<Movie | null>(null);
-  const [isSubmittingRating, setIsSubmittingRating] = useState(false);
-
-  // Reset movie index when filters change
-  React.useEffect(() => {
-    setCurrentMovieIndex(0);
-  }, [queryParams]);
 
   /**
    * Get current movie to display
    */
-  const currentMovie = filteredMovies[currentMovieIndex] || null;
+  const currentMovie = discoverMovies[currentMovieIndex] || null;
 
   /**
-   * Handle match action - Like the movie and send rating to backend
+   * Handle match action - Like the movie
    */
   const handleMatch = async () => {
-    if (currentMovie) {
-      try {
-        setIsSubmittingRating(true);
+    if (!currentMovie) return;
 
-        // Create rating with 5 stars (like)
-        const ratingData: CreateRatingDTO = {
-          movieId: currentMovie.id,
-          rating: 5
-        };
-
-        // Send rating to backend
-        await createOrUpdateRating(ratingData);
-        console.log(`✅ Rated movie ${currentMovie.id} with 5 stars`);
-
-        // Add to matches
-        await addMatch(currentMovie);
-        setMatchedMovie(currentMovie);
-        setShowMatchModal(true);
-      } catch (err) {
-        console.error('Error adding match:', err);
-      } finally {
-        setIsSubmittingRating(false);
-      }
+    try {
+      // createMatch automatically invalidates cache and fetches new movies
+      createMatch(currentMovie.id, 'like');
+      setMatchedMovie(currentMovie);
+      setShowMatchModal(true);
+    } catch (err) {
+      console.error('Error adding match:', err);
     }
   };
 
   /**
-   * Handle skip action - Dislike the movie and send rating to backend
+   * Handle skip action - Dislike the movie
    */
   const handleSkip = async () => {
-    if (currentMovie) {
-      try {
-        setIsSubmittingRating(true);
+    if (!currentMovie) return;
 
-        // Create rating with 1 star (dislike)
-        const ratingData: CreateRatingDTO = {
-          movieId: currentMovie.id,
-          rating: 1
-        };
-
-        // Send rating to backend
-        await createOrUpdateRating(ratingData);
-        console.log(`⊘ Rated movie ${currentMovie.id} with 1 star`);
-      } catch (err) {
-        console.error('Error submitting skip rating:', err);
-      } finally {
-        setIsSubmittingRating(false);
-        advanceToNextMovie();
-      }
+    try {
+      // createMatch with 'dislike' status
+      createMatch(currentMovie.id, 'dislike');
+      advanceToNextMovie();
+    } catch (err) {
+      console.error('Error submitting skip:', err);
+      advanceToNextMovie(); // Still advance even if error
     }
   };
 
@@ -201,7 +126,7 @@ const MovieListContainer: React.FC = () => {
   };
 
   // Loading state
-  if (isLoadingMovies) {
+  if (isLoadingDiscover) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -213,11 +138,11 @@ const MovieListContainer: React.FC = () => {
   }
 
   // Error state
-  if (moviesError) {
+  if (discoverError) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <p className="text-red-500 mb-4">Error al cargar películas: {moviesError.message || 'Unknown error'}</p>
+          <p className="text-red-500 mb-4">Error al cargar películas</p>
           <button
             onClick={() => window.location.reload()}
             className="btn-primary"
@@ -235,7 +160,7 @@ const MovieListContainer: React.FC = () => {
         <div className="w-full sm:max-w-6xl lg:max-w-7xl mx-auto h-[calc(100vh-80px-48px)]">
           {/* Movie Cards Stack */}
           <div className="flex justify-center items-center h-full relative">
-            {allMovies.length === 0 ? (
+            {discoverMovies.length === 0 ? (
               <motion.div
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -246,16 +171,13 @@ const MovieListContainer: React.FC = () => {
                   Intenta ajustar tus filtros para encontrar películas.
                 </p>
                 <button
-                  onClick={() => {
-                    // Reset filters
-                    setFilterParams({ genres: [], year: null, minRating: 0 });
-                  }}
+                  onClick={() => navigate('/search')}
                   className="btn-primary"
                 >
-                  Limpiar Filtros
+                  Ir a Búsqueda Avanzada
                 </button>
               </motion.div>
-            ) : currentMovieIndex >= filteredMovies.length ? (
+            ) : currentMovieIndex >= discoverMovies.length ? (
               <motion.div
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -265,30 +187,19 @@ const MovieListContainer: React.FC = () => {
                   ¡No hay más películas para mostrar!
                 </h2>
                 <p className="text-gray-400 mb-6">
-                  Has visto {filteredMovies.length} películas. Intenta ajustar tus filtros o vuelve más tarde.
+                  Has visto {discoverMovies.length} películas. Recarga para ver más.
                 </p>
-                <div className="flex gap-4">
-                  <button
-                    onClick={() => {
-                      // Use the Filters button from Navbar instead
-                      handleResetMovies();
-                    }}
-                    className="btn-primary flex-1"
-                  >
-                    Ajustar Filtros
-                  </button>
-                  <button
-                    onClick={handleResetMovies}
-                    className="btn-secondary flex-1"
-                  >
-                    Comenzar de Nuevo
-                  </button>
-                </div>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="btn-primary"
+                >
+                  Cargar Más Películas
+                </button>
               </motion.div>
             ) : (
               <>
                 {/* Stack preview of next movies */}
-                {filteredMovies.slice(currentMovieIndex + 1, currentMovieIndex + 3).map((movie, index) => (
+                {discoverMovies.slice(currentMovieIndex + 1, currentMovieIndex + 3).map((movie: any, index: number) => (
                   <div
                     key={movie.id}
                     className="absolute w-full max-w-[90vw] sm:max-w-md lg:max-w-lg xl:max-w-xl"
@@ -309,7 +220,7 @@ const MovieListContainer: React.FC = () => {
                     onMatch={handleMatch}
                     onSkip={handleSkip}
                     onShowDetails={handleViewDetails}
-                    isLoading={isSubmittingRating}
+                    isLoading={isCreatingMatch}
                   />
                 )}
               </>
@@ -327,15 +238,7 @@ const MovieListContainer: React.FC = () => {
         />
       )}
 
-      {/* Filters Sidebar */}
-      <AnimatePresence>
-        {filtersSidebar.isOpen && (
-          <FiltersSidebarComponent
-            onClose={closeFiltersSidebar}
-            onApplyFilters={applyFilters}
-          />
-        )}
-      </AnimatePresence>
+      {/* Filters removed - use Search page for filtering */}
     </div>
   );
 };

@@ -91,11 +91,36 @@ export async function getMatchStatus(userId: number, movieId: number) {
 }
 
 /**
+ * Shuffle array using Fisher-Yates algorithm
+ * Provides "soft random" ordering for discover movies
+ * @param items - Array to shuffle
+ * @returns Shuffled copy of the array
+ */
+function shuffle<T>(items: T[]): T[] {
+  const result = [...items];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
+/**
  * Obtiene películas para discover (excluyendo ya vistas)
- * Optimizado usando relación inversa
+ * Con orden aleatorio usando shuffle en memoria
+ * 
+ * Nota: Este endpoint usa "random soft" (shuffle en memoria) en lugar de ORDER BY RANDOM()
+ * para mejor performance. Si necesitas agregar filtros en el futuro, agrega parámetros
+ * opcionales pero mantén el shuffle para variedad.
+ * 
+ * @param userId - ID del usuario
+ * @param limit - Cantidad de películas a retornar (default: 10)
+ * @returns Array de películas en orden aleatorio, excluyendo las ya matcheadas
  */
 export async function getDiscoverMovies(userId: number, limit = 10) {
-  return prisma.movie.findMany({
+  // Traer el doble de películas para tener buena variedad al mezclar
+  // limit * 2 es suficiente sin sobrecargar la BD
+  const candidates = await prisma.movie.findMany({
     where: {
       matches: {
         none: { userId }
@@ -108,12 +133,12 @@ export async function getDiscoverMovies(userId: number, limit = 10) {
         }
       }
     },
-    orderBy: [
-      { voteAverage: 'desc' },
-      { createdAt: 'desc' }
-    ],
-    take: limit
+    // Traer más candidatos para shuffle, pero no usar orderBy para evitar overhead
+    take: limit * 2,
   });
+
+  // Mezclar y retornar solo el límite solicitado
+  return shuffle(candidates).slice(0, limit);
 }
 
 /**
