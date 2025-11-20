@@ -113,7 +113,6 @@ export const Search: React.FC = () => {
   }, [moviesData, decade, trend, sortBy]);
 
   const totalResults = filteredMovies.length;
-  const totalResults = filteredMovies.length;
   const totalPages = Math.ceil(totalResults / safePagination.itemsPerPage);
   const currentPage = safePagination.currentPage;
 
