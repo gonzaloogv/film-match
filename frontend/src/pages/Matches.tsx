@@ -27,17 +27,18 @@ const Matches: React.FC = () => {
 
   // Convert API response to Movie format
   const matchedMovies: Movie[] = useMemo(() => {
-    if (!matchlistData?.matches) return [];
-    return matchlistData.matches.map((match: any) => ({
+    if (!matchlistData?.items) return [];
+    return matchlistData.items.map((match: any) => ({
       id: match.movie.id,
       title: match.movie.title,
       overview: match.movie.overview || '',
-      poster: match.movie.posterPath || '',
+      poster: match.movie.posterPath ? `https://image.tmdb.org/t/p/w500${match.movie.posterPath}` : '',
       rating: match.movie.voteAverage ? Number(match.movie.voteAverage) / 2 : 0, // Convert from 0-10 to 0-5
       year: match.movie.releaseDate ? new Date(match.movie.releaseDate).getFullYear() : 0,
-      genres: match.movie.genres || [],
+      genres: (match.movie.categories || []).map((cat: any) => cat.category?.name || 'Unknown').filter(Boolean),
       director: '', // Not available in API response
-      cast: [], // Not available in API response
+      cast: [], // Not available in API response,
+      duration: 'N/A'
     }));
   }, [matchlistData]);
 

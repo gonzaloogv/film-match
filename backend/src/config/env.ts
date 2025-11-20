@@ -85,7 +85,7 @@ function validateEnv(): EnvConfig {
     googleClientId: process.env.GOOGLE_CLIENT_ID || '',
     googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
     googleRedirectUri: process.env.GOOGLE_REDIRECT_URI || '',
-    frontendUrl: process.env.FRONTEND_URL!,
+    frontendUrl: process.env.FRONTEND_URL!.replace(/\/$/, ''), // Remove trailing slash
     tmdbApiKey: process.env.TMDB_API_KEY!,
     tmdbBaseUrl: process.env.TMDB_API_BASE_URL || 'https://api.themoviedb.org/3',
     tmdbImageBaseUrl: process.env.TMDB_IMAGE_BASE_URL || 'https://image.tmdb.org/t/p',
