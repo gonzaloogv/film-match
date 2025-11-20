@@ -58,13 +58,16 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       console.log('📝 Updating profile:', profile);
 
       // Map UserProfile to API format
+      // Convert undefined to null or empty string for proper validation
       const updateData = {
         nickname: profile.nickname,
-        bio: profile.bio,
-        profilePicture: profile.avatar, // Map avatar to profilePicture for API
-        twitterUrl: profile.twitterUrl,
-        instagramUrl: profile.instagramUrl,
+        bio: profile.bio || null,
+        profilePicture: profile.avatar || null, // Map avatar to profilePicture for API
+        twitterUrl: profile.twitterUrl || '',  // Empty string for URLs
+        instagramUrl: profile.instagramUrl || '',  // Empty string for URLs
       };
+
+      console.log('📤 Sending to API:', updateData);
 
       // Call backend API
       await authService.updateUserProfile(updateData);
