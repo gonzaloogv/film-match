@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, X, Search, Loader } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import { preferencesService } from '@/api/services';
+import { movieService } from '@/api/services/movie.service';
 import { useMovieSearch } from '@/hooks/api/useMovieSearch';
 import { queryKeys } from '@/lib/cache/query-cache';
 import type { MovieDTO } from '@/api/types';
@@ -65,19 +66,13 @@ const Preferences: React.FC = () => {
         if (preferences.favoriteMovieIds && preferences.favoriteMovieIds.length > 0) {
           const moviePromises = preferences.favoriteMovieIds.map(async (id) => {
             try {
-              const response = await fetch(`${import.meta.env.VITE_API_URL}/movies/${id}`, {
-                headers: {
-                  'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-                }
-              });
-              if (response.ok) {
-                const data = await response.json();
-                return data.data;
-              }
+              // Use movieService instead of raw fetch - apiClient handles base URL
+              const movie = await movieService.getMovieById(id);
+              return movie;
             } catch (err) {
               console.error(`Error loading movie ${id}:`, err);
+              return null;
             }
-            return null;
           });
 
           const movies = await Promise.all(moviePromises);
