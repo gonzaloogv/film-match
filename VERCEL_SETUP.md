@@ -72,6 +72,24 @@ Una vez que el deployment esté listo:
 
 ## Troubleshooting
 
+### ❌ Error: "GET .../undefined/movies/99"
+
+**Problema:** Aparece "undefined" en las URLs de las requests.
+
+**Causa:** `VITE_API_BASE_URL` NO está configurado en Vercel.
+
+**Solución:**
+1. Ve a Vercel Dashboard → Settings → Environment Variables
+2. Agrega `VITE_API_BASE_URL` = `https://film-match-backend.onrender.com/api`
+3. Agrega `VITE_API_TIMEOUT` = `30000`
+4. **Redeploy** (paso importante!)
+5. Verifica en consola que aparezca: `📡 API Client inicializado: baseURL: "https://film-match-backend.onrender.com/api"`
+
+**¿Por qué pasa esto?**
+- El archivo `.env.production` NO se lee automáticamente en Vercel
+- Debes configurar las variables en el Dashboard de Vercel
+- Cada variable debe agregarse manualmente
+
 ### Error: "Unable to connect to server"
 
 **Problema:** El frontend no puede conectarse al backend.
