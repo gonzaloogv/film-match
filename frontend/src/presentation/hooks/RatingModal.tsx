@@ -10,7 +10,8 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { X, Star } from 'lucide-react';
 import { useMovieRatings } from '@/hooks';
-import type { Movie, UserRating } from '@core';
+import { UserRating } from '@core';
+import type { Movie } from '@core';
 
 interface RatingModalProps {
   movie: Movie;
