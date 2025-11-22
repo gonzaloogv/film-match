@@ -136,7 +136,7 @@ export const useAuth = () => {
 
     // Mutations
     loginWithGoogle: (token: string) =>
-      loginWithGoogleMutation.mutate({ token }),
+      loginWithGoogleMutation.mutateAsync({ token }),
     isLoggingIn: loginWithGoogleMutation.isPending,
     loginError: loginWithGoogleMutation.error,
 

@@ -1,17 +1,26 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Film, AlertCircle } from 'lucide-react';
-import { GoogleLogin } from '@react-oauth/google';
+import { GoogleLogin, type CredentialResponse } from '@react-oauth/google';
 import { useGoogleLogin as useGoogleLoginHook } from '@/hooks/auth/useGoogleLogin';
 import { useEmailAuth } from '@/hooks/auth/useEmailAuth';
 
 const LoginForm: React.FC = () => {
   const navigate = useNavigate();
-  const { handleGoogleSuccess: processGoogleToken, handleGoogleError, isLoading: isGoogleLoading } = useGoogleLoginHook();
+  const { handleGoogleSuccess, handleGoogleError, isLoading: isGoogleLoading, error: googleAuthError } = useGoogleLoginHook();
   const { register, login, isLoading: isEmailLoading, error: emailError, clearError } = useEmailAuth();
   const [isRegister, setIsRegister] = useState(false);
   const [googleError, setGoogleError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (googleAuthError) {
+      const message = googleAuthError instanceof Error
+        ? googleAuthError.message
+        : 'Error logging in with Google';
+      setGoogleError(message);
+    }
+  }, [googleAuthError]);
 
   // Login form states
   const [email, setEmail] = useState('');
@@ -75,28 +84,24 @@ const LoginForm: React.FC = () => {
     }
   };
 
-  const onGoogleSuccess = (credentialResponse: any) => {
-    console.log('✅ Google login success:', credentialResponse);
+  const onGoogleSuccess = async (credentialResponse: CredentialResponse) => {
+    setGoogleError(null);
+    setFormError(null);
+
     try {
-      // Extract JWT token from Google response
-      const token = credentialResponse.credential;
-      if (token) {
-        // Call the hook's handler with the token
-        processGoogleToken(token);
-        // Navigate to home on success
-        navigate('/home');
-      } else {
-        setGoogleError('No credential received from Google');
-      }
+      await handleGoogleSuccess(credentialResponse);
+      navigate('/home');
     } catch (error) {
       console.error('Error processing Google login:', error);
-      setGoogleError('Error logging in with Google');
+      const message = error instanceof Error ? error.message : 'Error logging in with Google';
+      setGoogleError(message);
     }
   };
 
   const onGoogleError = () => {
     console.error('❌ Google login failed');
     setGoogleError('Failed to login with Google. Please try again.');
+    handleGoogleError();
   };
 
   return (

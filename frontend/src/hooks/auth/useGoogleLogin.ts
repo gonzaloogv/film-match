@@ -1,40 +1,31 @@
-/**
- * useGoogleLogin hook
- *
- * Encapsula la lógica de login con Google
- * Maneja la respuesta del SDK de Google y llama al backend
- */
-
 import { useCallback } from 'react';
+import { type CredentialResponse } from '@react-oauth/google';
 import { useAuth } from '@/hooks/api';
 
 /**
  * useGoogleLogin hook
  *
- * @returns Object con funciones y estado de login
+ * Encapsula la logica de login con Google.
+ * Maneja la respuesta del SDK de Google y llama al backend.
  */
 export const useGoogleLogin = () => {
   const { loginWithGoogle, isLoggingIn, loginError, isAuthenticated } = useAuth();
 
   /**
-   * Maneja el éxito del login de Google
+   * Maneja el exito del login de Google
    * Se llama cuando el usuario completa exitosamente el login con Google
    *
    * @param credentialResponse - Respuesta del Google Sign-In
    */
   const handleGoogleSuccess = useCallback(
-    async (credentialResponse: any) => {
-      try {
-        if (!credentialResponse.credential) {
-          throw new Error('No credential received from Google');
-        }
-
-        // El token JWT viene en credentialResponse.credential
-        // Lo enviamos al backend para verificarlo y crear la sesión
-        loginWithGoogle(credentialResponse.credential);
-      } catch (error) {
-        console.error('Error en Google login:', error);
+    async (credentialResponse: CredentialResponse) => {
+      if (!credentialResponse?.credential) {
+        throw new Error('No credential received from Google');
       }
+
+      // El token JWT viene en credentialResponse.credential
+      // Lo enviamos al backend para verificarlo y crear la sesion
+      return loginWithGoogle(credentialResponse.credential);
     },
     [loginWithGoogle]
   );
